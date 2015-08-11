@@ -24,17 +24,22 @@ public class OSMHBase {
 		OMS_Collection omsHistory = null;
 		try
 		{
-			omsHistory = OMS_Collection.readOMS_Collection("/Users/brown303/workspace/eclipse/OSM-HBASE/data/cab.20150720.his");
+			int i;
+			omsHistory = OMS_Collection.readOMS_Collection("/Users/brown303/workspace/llnl/networks/oms/cab.20150730.his");
 			OpenSmMonitorService oms = omsHistory.getNewestOMS();
 			RT_Table RoutingTable = RT_Table.buildRT_Table(oms.getFabric());
 			LinkedHashMap<String, IB_Link> ibLinks = oms.getFabric().getIB_Links();
 			
+			
+			String rtable = RoutingTable.getRT_Node(7).getRT_Port(1).toLongString();
 			//RT_Table.writeRT_Table("/Users/brown303/workspace/eclipse/OSM-HBASE/data/route.table", RoutingTable);
 			
+			System.out.println(rtable);
 			
 			StringBuffer buff = new StringBuffer();
 			buff.append("Links: \n");
 			
+			/*
 			for(Map.Entry<String, IB_Link> entry: ibLinks.entrySet()){
 		        String rn = entry.getKey();
 		        IB_Link ln = entry.getValue();
@@ -56,7 +61,7 @@ public class OSMHBase {
 		        
 		        buff.append(nguid1 + ":" + nguid2 + ":" + pn1  + ":" + pn2  + ":" + ntyp1 + ":" + ntyp2 + ":" + lid1 + ":" + lid2 + "\n");
 			}
-			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links.table");
+			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links.table-0730");
 			if (!file.exists()) {
 				file.createNewFile();
 			}
@@ -64,6 +69,7 @@ public class OSMHBase {
 			BufferedWriter bw = new BufferedWriter(fw);
 			bw.write(buff.toString());
 			bw.close();
+			*/
 			
 		
 		}
