@@ -3,6 +3,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.Console;
@@ -24,62 +25,115 @@ public class OSMHBase {
 		OMS_Collection omsHistory = null;
 		try
 		{
-			int i;
 			omsHistory = OMS_Collection.readOMS_Collection("/Users/brown303/workspace/llnl/networks/oms/cab.20150730.his");
 			OpenSmMonitorService oms = omsHistory.getNewestOMS();
-			RT_Table RoutingTable = RT_Table.buildRT_Table(oms.getFabric());
-			LinkedHashMap<String, IB_Link> ibLinks = oms.getFabric().getIB_Links();
+			OSM_Fabric fabric = oms.getFabric();
 			
+			writePortForwardingTable(RT_Table.buildRT_Table(fabric));
+			writeLinks(fabric.getIB_Links());
 			
-			String rtable = RoutingTable.getRT_Node(7).getRT_Port(1).toLongString();
-			//RT_Table.writeRT_Table("/Users/brown303/workspace/eclipse/OSM-HBASE/data/route.table", RoutingTable);
-			
-			System.out.println(rtable);
-			
-			StringBuffer buff = new StringBuffer();
-			buff.append("Links: \n");
-			
-			/*
-			for(Map.Entry<String, IB_Link> entry: ibLinks.entrySet()){
-		        String rn = entry.getKey();
-		        IB_Link ln = entry.getValue();
-		        
-		        OSM_Port port1 = ln.getEndpoint1();
-		        OSM_Port port2 = ln.getEndpoint2();
-		        
-		        IB_Guid nguid1 = port1.getNodeGuid();
-		        IB_Guid nguid2 = port2.getNodeGuid();
-		        
-		        int pn1 =  port1.getPortNumber();
-		        int pn2 =  port2.getPortNumber();
-		        
-		        String ntyp1 = port1.getNodeType().getAbrevName();
-		        String ntyp2 = port2.getNodeType().getAbrevName();
-		        
-		        int lid1 = port1.getAddress().getLocalId();
-		        int lid2 = port2.getAddress().getLocalId();
-		        
-		        buff.append(nguid1 + ":" + nguid2 + ":" + pn1  + ":" + pn2  + ":" + ntyp1 + ":" + ntyp2 + ":" + lid1 + ":" + lid2 + "\n");
-			}
-			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links.table-0730");
-			if (!file.exists()) {
-				file.createNewFile();
-			}
-			FileWriter fw = new FileWriter(file.getAbsoluteFile());
-			BufferedWriter bw = new BufferedWriter(fw);
-			bw.write(buff.toString());
-			bw.close();
-			*/
-			
-		
 		}
 		catch (Exception e)
 		{
 			System.err.println("Couldn't open the file");
 			e.printStackTrace();
 		}
-		System.out.println("Done");
+		System.out.println("- Complete");
+	}
+	
+	private static void writePortForwardingTable(RT_Table RoutingTable){
+		
+		RT_Node node;
+		String nguid;
+		RT_Port port;
+		Integer portNum;
+		Integer routeLid;
+		StringBuffer buffer = new StringBuffer();
+	
+		buffer.append("# Record format: \"<ExitPort>:<LID>\"\n");
+		buffer.append("----BEGIN----\n");
+		
+		for (Map.Entry<String, RT_Node> nEntry: RoutingTable.getSwitchGuidMap().entrySet()){
+			node  = nEntry.getValue();
+			nguid = node.getGuid().toColonString().replace(":", "");
+			
+			buffer.append("\nSwitch: 0x" + nguid + "\n");
+			
+			for (Map.Entry<String,RT_Port> pEntry: node.getPortRouteMap().entrySet()){
+				port = pEntry.getValue();
+				portNum = port.getPortNumber();
+				
+				for (Map.Entry<String,Integer> item: port.getLidGuidMap().entrySet()){
+					routeLid = item.getValue();
+					buffer.append(portNum + ":" + routeLid + "\n");
+				}
+			}
+		}
+		
+		buffer.append("\n----END----");
+		
+		try{
+			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/routes.table-0730.txt");
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			FileWriter fw = new FileWriter(file.getAbsoluteFile());
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write(buffer.toString());
+			bw.close();
+			
+		}catch (Exception e){
+			System.out.println("ERROR: Unable to write routes to file.");
+		}
+	}
+	
+	private static void writeLinks(LinkedHashMap<String, IB_Link> ibLinks){
+		OSM_Port port1, port2;
+		IB_Guid nguid1, nguid2;
+		Integer portNum1, portNum2;
+		String nodeType1, nodeType2;
+		Integer lid1, lid2;
+		
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("# Record format: \"nguid1:nguid2:pn1:pn2:ntype1:ntype2:lid1:lid2\"\n");
+		buffer.append("----BEGIN----\n\n");
+		
+		for(Map.Entry<String, IB_Link> entry: ibLinks.entrySet()){
+	        IB_Link ln = entry.getValue();
+	        
+	        port1 = ln.getEndpoint1();
+	        port2 = ln.getEndpoint2();
+	        
+	        nguid1 = port1.getNodeGuid();
+	        nguid2 = port2.getNodeGuid();
+	        
+	        portNum1 =  port1.getPortNumber();
+	        portNum2 =  port2.getPortNumber();
+	        
+	        nodeType1 = port1.getNodeType().getAbrevName();
+	        nodeType2 = port2.getNodeType().getAbrevName();
+	        
+	        lid1 = port1.getAddress().getLocalId();
+	        lid2 = port2.getAddress().getLocalId();
+	        
+	        buffer.append(nguid1 + ":" + nguid2 + ":" + portNum1  + ":" + portNum2  + ":" + nodeType1 + ":" + nodeType2 + ":" + lid1 + ":" + lid2 + "\n");
+		}
 
+		buffer.append("\n----END----");
+		
+		try{
+			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links.table-0730.txt");
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			FileWriter fw = new FileWriter(file.getAbsoluteFile());
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write(buffer.toString());
+			bw.close();
+			
+		}catch (Exception e){
+			System.out.println("ERROR: Unable to write links to file.");
+		}
 	}
 	
 	public static void WorkConsole(String[] args) throws Exception
