@@ -24,13 +24,23 @@ public class OSMHBase {
 
 		OMS_Collection omsHistory = null;
 		try
-		{
+		{	int i;
+			long timestamp;
 			omsHistory = OMS_Collection.readOMS_Collection("/Users/brown303/workspace/llnl/networks/oms/cab.20150730.his");
 			OpenSmMonitorService oms = omsHistory.getNewestOMS();
 			OSM_Fabric fabric = oms.getFabric();
 			
-			writePortForwardingTable(RT_Table.buildRT_Table(fabric));
-			writeLinks(fabric.getIB_Links());
+			timestamp = oms.getTimeStamp().getTimeInSeconds();
+			
+			//writePortForwardingTable(RT_Table.buildRT_Table(fabric), timestamp);
+			//writeLinks(fabric.getIB_Links(), timestamp);
+			
+			writePortCounters(fabric.getOSM_Ports(), timestamp);
+			
+			//for (i = 50; i < omsHistory.getSize(); i++){
+				//oms = omsHistory.getOMS(i);
+				//System.out.println(i + " - " + oms.getTimeStamp().toString() + " - " + oms.getTimeStamp().getTimeInSeconds());
+			//}
 			
 		}
 		catch (Exception e)
@@ -41,17 +51,53 @@ public class OSMHBase {
 		System.out.println("- Complete");
 	}
 	
-	private static void writePortForwardingTable(RT_Table RoutingTable){
+	private static void writePortCounters(LinkedHashMap<String, OSM_Port> ports, long timestamp){
+		int i;
+		
+		OSM_Port port;
+		String portId;
+		String nguid;
+		int portNum;
+		long recvData;
+		long xmitData;
+		StringBuffer buffer = new StringBuffer();
+		
+		buffer.append("# Record format: \"<timestamp>:<nguid>:<pn>:<recvData>:<xmitData>\"\n");
+		buffer.append("----Port Counters BEGIN----\n");
+		
+		i = 0;
+		for (Map.Entry<String, OSM_Port> entry: ports.entrySet()){
+			portId = entry.getKey();
+			port = entry.getValue();
+			
+			nguid = portId.substring(0, 19).replace(":", "");
+			portNum = Integer.parseInt(portId.substring(20));
+			
+			recvData = port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_data);
+			xmitData = port.pfmPort.getCounter(PFM_Port.PortCounterName.xmit_data);
+			
+			//buffer.append(timestamp + ":" + nguid + ":" + portNum + ":" + recvData + ":" + xmitData + "\n"); 
+			
+			if (i == 10){
+				//System.out.println(buffer.toString());
+			}
+			i++;
+		}
+				
+		//System.out.println("Done: " + i);
+	}
+	
+	private static void writePortForwardingTable(RT_Table RoutingTable, long timestamp){
 		
 		RT_Node node;
 		String nguid;
 		RT_Port port;
-		Integer portNum;
-		Integer routeLid;
+		int portNum;
+		int routeLid;
 		StringBuffer buffer = new StringBuffer();
 	
 		buffer.append("# Record format: \"<ExitPort>:<LID>\"\n");
-		buffer.append("----BEGIN----\n");
+		buffer.append("----Forwarding Table BEGIN----\n");
 		
 		for (Map.Entry<String, RT_Node> nEntry: RoutingTable.getSwitchGuidMap().entrySet()){
 			node  = nEntry.getValue();
@@ -73,7 +119,7 @@ public class OSMHBase {
 		buffer.append("\n----END----");
 		
 		try{
-			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/routes.table-0730.txt");
+			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/routes-table." + timestamp + ".txt");
 			if (!file.exists()) {
 				file.createNewFile();
 			}
@@ -81,13 +127,14 @@ public class OSMHBase {
 			BufferedWriter bw = new BufferedWriter(fw);
 			bw.write(buffer.toString());
 			bw.close();
+			System.out.println("- Wrote routes file.");
 			
 		}catch (Exception e){
 			System.out.println("ERROR: Unable to write routes to file.");
 		}
 	}
 	
-	private static void writeLinks(LinkedHashMap<String, IB_Link> ibLinks){
+	private static void writeLinks(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
 		OSM_Port port1, port2;
 		IB_Guid nguid1, nguid2;
 		Integer portNum1, portNum2;
@@ -122,7 +169,7 @@ public class OSMHBase {
 		buffer.append("\n----END----");
 		
 		try{
-			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links.table-0730.txt");
+			File file = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/links-table." + timestamp + ".txt");
 			if (!file.exists()) {
 				file.createNewFile();
 			}
@@ -130,6 +177,7 @@ public class OSMHBase {
 			BufferedWriter bw = new BufferedWriter(fw);
 			bw.write(buffer.toString());
 			bw.close();
+			System.out.println("- Wrote links file.");
 			
 		}catch (Exception e){
 			System.out.println("ERROR: Unable to write links to file.");
