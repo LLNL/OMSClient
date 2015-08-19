@@ -15,12 +15,10 @@ import gov.llnl.lc.infiniband.opensm.plugin.data.OSM_SysInfo;
 import gov.llnl.lc.infiniband.opensm.plugin.net.OsmClientApi;
 import gov.llnl.lc.infiniband.opensm.plugin.net.OsmServiceManager;
 import gov.llnl.lc.infiniband.opensm.plugin.net.OsmSession;
-import gov.llnl.lc.infiniband.core.IB_Guid;
 import gov.llnl.lc.infiniband.core.IB_Link;
 import gov.llnl.lc.infiniband.opensm.plugin.data.*;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import net.minidev.json.JSONObject;
 
 public class OSMHBase {
 	
@@ -32,12 +30,79 @@ public class OSMHBase {
     		return name.startsWith("cab.201507") && name.endsWith(".his");
     	}
 	};
-	private static File hisDir = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/history");
+	private static File hisDir;
 	private static File outDir = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/processed");
+	private static enum outFormat {json, delimited};
 	
 	public static void main(String[] args) throws Exception
 	{
-
+			if (args.length > 0){
+				if (args[0].equals("help")){
+					showUsage();
+				}
+				if (args[0].equals("parseHis")){
+					processOMSHistory(args);
+				}
+				
+			} else{
+				System.out.println("No arguments found.");
+				showUsage();
+				System.exit(1);
+			}
+			
+	}
+	
+	private static void showUsage(){
+		System.out.println("-- ibperfp : IB Performance Processor --");
+		System.out.println(" ibperfp <operation> [<args>...] [json/del]");
+		System.out.println("");
+		System.out.println("Usage:");
+		System.out.println("# ibperfp help                            - Shows this help/usage message.");
+		System.out.println("# ibperfp parseHis /path/to/his/dir       - Extract data from OMS '.his' files located in a given path.");
+		System.out.println("# ibperfp parseHis /path/to/hisFile       - Extract data from a single '.his'");
+		System.out.println("# ibperfp parseHis <path> json            - Writes data in JSON format.");
+		System.out.println("# ibperfp parseHis <path> del             - Writes data in delimited format.");
+	}
+	
+	private static void processOMSHistory(String[] args){
+		
+		File path;
+		File[] hisFiles = null;
+		outFormat outType = null;
+		
+		if (args.length > 1){
+			path = new File(args[1]);
+			
+			if(path.exists()){
+				if(path.isDirectory()){
+					hisDir = path;
+				} 
+				else if(path.isFile()){
+					hisFiles = new File[1];
+					hisFiles[0] = path;
+				}
+				else{
+					System.err.println("ERROR: Cannot find path to history file(s) at: " + args[1]);
+					showUsage();
+					System.exit(1);
+				}
+			}
+			outType = outFormat.json;
+			
+		} else{
+			System.err.println("ERROR: No path argument given.");
+			showUsage();
+			System.exit(1);
+		}
+		
+		if (args.length > 2){
+			if (args[2].equals("csv")){
+				outType = outFormat.delimited;
+			} else if(! args[2].equals("json")){
+				System.err.println("ERROR: Invalid file format '" + args[2] + "' given. Using JSON.");
+			}
+		}
+		
 		OMS_Collection omsHistory = null;
 		OpenSmMonitorService oms = null;
 		OSM_Fabric fabric = null;
@@ -60,7 +125,9 @@ public class OSMHBase {
 			linksBW = new BufferedWriter(new FileWriter(linksFile));
 			
 			
-			File[] hisFiles = hisDir.listFiles(fnameFilter);
+			if (hisFiles == null){
+				hisFiles = hisDir.listFiles(fnameFilter);
+			}
 			for (File hisFile : hisFiles){
 				System.out.println("Processing history file: " + hisFile.getPath());
 			
@@ -73,9 +140,15 @@ public class OSMHBase {
 					timestamp = oms.getTimeStamp().getTimeInSeconds();
 					System.out.println(".snapshot: " + oms.getTimeStamp().toString() + ".");
 					
-					//writePortCountersJSON(fabric.getOSM_Ports(), timestamp);
-					//writeLinksJSON(fabric.getIB_Links(), timestamp);
-					//writePortForwardingTableJSON(RT_Table.buildRT_Table(fabric), timestamp);
+					if (outType == outFormat.json){
+						writeLinksJSON(fabric.getIB_Links(), timestamp);
+						writePortCountersJSON(fabric.getOSM_Ports(), timestamp);
+						writePortForwardingTableJSON(RT_Table.buildRT_Table(fabric), timestamp);
+					} else{
+						writeLinksCSV(fabric.getIB_Links(), timestamp);
+						writePortCountersCSV(fabric.getOSM_Ports(), timestamp);
+						writePortForwardingTableCSV(RT_Table.buildRT_Table(fabric), timestamp);
+					}
 					
 				}
 			}
@@ -100,8 +173,8 @@ public class OSMHBase {
 		}
 		System.out.println("- Complete");
 	}
-		
-	private static void writePortCounters(LinkedHashMap<String, OSM_Port> ports, long timestamp){
+	
+	private static void writePortCountersCSV(LinkedHashMap<String, OSM_Port> ports, long timestamp){
 		OSM_Port port;
 		String portId;
 		String nguid;
@@ -227,7 +300,7 @@ public class OSMHBase {
 		System.out.println("- Wrote counters file.");
 	}
 	
-	private static void writePortForwardingTable(RT_Table RoutingTable, long timestamp){
+	private static void writePortForwardingTableCSV(RT_Table RoutingTable, long timestamp){
 		
 		RT_Node node;
 		String nguid;
@@ -315,7 +388,7 @@ public class OSMHBase {
 			System.out.println("- Wrote routes to file.");
 		}
 	
-	private static void writeLinks(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
+	private static void writeLinksCSV(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
 		OSM_Port port1, port2;
 		String nguid1, nguid2;
 		Integer portNum1, portNum2;

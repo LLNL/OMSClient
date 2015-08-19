@@ -27,6 +27,6 @@
 	<classpathentry kind="lib" path="/Users/brown303/workspace/llnl/networks/oms/jars_and_libs/SubnetMonitorTool/lib/jung-visualization-2.0.1.jar"/>
 	<classpathentry kind="lib" path="/Users/brown303/workspace/llnl/networks/oms/jars_and_libs/SubnetMonitorTool/lib/smt-helpSet.jar"/>
 	<classpathentry kind="lib" path="/Users/brown303/workspace/llnl/networks/oms/jars_and_libs/SubnetMonitorTool/lib/swingx-all-1.6.4.jar"/>
-	<classpathentry kind="lib" path="/Users/brown303/workspace/eclipse/lib/java-json.jar"/>
+	<classpathentry kind="lib" path="/Users/brown303/workspace/eclipse/lib/json-smart-1.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
