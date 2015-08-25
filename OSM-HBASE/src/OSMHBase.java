@@ -11,10 +11,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 
-import gov.llnl.lc.infiniband.opensm.plugin.data.OSM_SysInfo;
-import gov.llnl.lc.infiniband.opensm.plugin.net.OsmClientApi;
-import gov.llnl.lc.infiniband.opensm.plugin.net.OsmServiceManager;
-import gov.llnl.lc.infiniband.opensm.plugin.net.OsmSession;
+//import gov.llnl.lc.infiniband.opensm.plugin.data.OSM_SysInfo;
+//import gov.llnl.lc.infiniband.opensm.plugin.net.OsmClientApi;
+//import gov.llnl.lc.infiniband.opensm.plugin.net.OsmServiceManager;
+//import gov.llnl.lc.infiniband.opensm.plugin.net.OsmSession;
 import gov.llnl.lc.infiniband.core.IB_Link;
 import gov.llnl.lc.infiniband.opensm.plugin.data.*;
 
@@ -22,12 +22,12 @@ import net.minidev.json.JSONObject;
 
 public class OSMHBase {
 	
-	private static BufferedWriter countersBW, linksBW, routesBW;
+	private static BufferedWriter countersBW, linksBW, routesBW, hbaseDumpBW;
 	private static boolean writingHeaders = false;
 	
 	private static FilenameFilter fnameFilter = new FilenameFilter() {
     	public boolean accept(File dir, String name) {
-    		return name.startsWith("cab.201507") && name.endsWith(".his");
+    		return name.startsWith("cab") && name.endsWith(".his");
     	}
 	};
 	private static File hisDir;
@@ -96,7 +96,7 @@ public class OSMHBase {
 		}
 		
 		if (args.length > 2){
-			if (args[2].equals("csv")){
+			if (args[2].equals("del")){
 				outType = outFormat.delimited;
 			} else if(! args[2].equals("json")){
 				System.err.println("ERROR: Invalid file format '" + args[2] + "' given. Using JSON.");
@@ -112,17 +112,25 @@ public class OSMHBase {
 		
 		int i;
 		
-		try{	
-			File counterFile = new File(outDir, "/counters." + currentTime + ".txt");
-			File routesFile = new File(outDir, "/routes." + currentTime + ".txt");
-			File linksFile = new File(outDir, "/links." + currentTime + ".txt");
-			if (!counterFile.exists()) { counterFile.createNewFile(); }
-			if (!routesFile.exists()) { routesFile.createNewFile(); }
-			if (!linksFile.exists()) { linksFile.createNewFile(); }
+		try{
+			if (outType == outFormat.delimited){
+				File counterFile = new File(outDir, "/counters." + currentTime + ".txt");
+				File routesFile = new File(outDir, "/routes." + currentTime + ".txt");
+				File linksFile = new File(outDir, "/links." + currentTime + ".txt");
+				if (!counterFile.exists()) { counterFile.createNewFile(); }
+				if (!routesFile.exists()) { routesFile.createNewFile(); }
+				if (!linksFile.exists()) { linksFile.createNewFile(); }
+				
+				countersBW = new BufferedWriter(new FileWriter(counterFile));
+				routesBW = new BufferedWriter(new FileWriter(routesFile));
+				linksBW = new BufferedWriter(new FileWriter(linksFile));
+			} else{
+				File hbaseDumpFile = new File(outDir, "/hbaseDump." + currentTime + ".txt");
+				if (!hbaseDumpFile.exists()) { hbaseDumpFile.createNewFile(); }
+				
+				hbaseDumpBW = new BufferedWriter(new FileWriter(hbaseDumpFile));
+			}
 			
-			countersBW = new BufferedWriter(new FileWriter(counterFile));
-			routesBW = new BufferedWriter(new FileWriter(routesFile));
-			linksBW = new BufferedWriter(new FileWriter(linksFile));
 			
 			
 			if (hisFiles == null){
@@ -141,30 +149,32 @@ public class OSMHBase {
 					System.out.println(".snapshot: " + oms.getTimeStamp().toString() + ".");
 					
 					if (outType == outFormat.json){
-						writeLinksJSON(fabric.getIB_Links(), timestamp);
+						writeLinksJSON(fabric, timestamp);
 						writePortCountersJSON(fabric.getOSM_Ports(), timestamp);
 						writePortForwardingTableJSON(RT_Table.buildRT_Table(fabric), timestamp);
 					} else{
-						writeLinksCSV(fabric.getIB_Links(), timestamp);
-						writePortCountersCSV(fabric.getOSM_Ports(), timestamp);
-						writePortForwardingTableCSV(RT_Table.buildRT_Table(fabric), timestamp);
+						writeLinksDelimited(fabric.getIB_Links(), timestamp);
+						writePortCountersDelimited(fabric.getOSM_Ports(), timestamp);
+						writePortForwardingTableDelimited(RT_Table.buildRT_Table(fabric), timestamp);
 					}
 					
 				}
 			}
-			//writePortForwardingTableJSON(RT_Table.buildRT_Table(fabric), timestamp);
-			//writeLinks(fabric.getIB_Links(), timestamp);
-			//writePortCounters(fabric.getOSM_Ports(), timestamp);
 			
-			countersBW.flush();
-			countersBW.close();
-			
-			routesBW.flush();
-			routesBW.close();
-			
-			linksBW.flush();
-			linksBW.close();
-			
+			if (outType == outFormat.delimited){
+				countersBW.flush();
+				countersBW.close();
+				
+				routesBW.flush();
+				routesBW.close();
+				
+				linksBW.flush();
+				linksBW.close();
+			}
+			if (outType == outFormat.json){
+				hbaseDumpBW.flush();
+				hbaseDumpBW.close();
+			}
 		}
 		catch (Exception e)
 		{
@@ -174,7 +184,7 @@ public class OSMHBase {
 		System.out.println("- Complete");
 	}
 	
-	private static void writePortCountersCSV(LinkedHashMap<String, OSM_Port> ports, long timestamp){
+	private static void writePortCountersDelimited(LinkedHashMap<String, OSM_Port> ports, long timestamp){
 		OSM_Port port;
 		String portId;
 		String nguid;
@@ -269,22 +279,36 @@ public class OSMHBase {
 			
 			jsonPort = new JSONObject();
 			try {
+				jsonPort.put("recordType", "counter");
 				jsonPort.put("ts", timestamp);
 				jsonPort.put("nguid", nguid);
 				jsonPort.put("portNum", portNum);
 				
-				jsonPort.put("r_data", recvData);
-				jsonPort.put("r_err", recvErr);
-				jsonPort.put("r_sr_err", recvSwRE);
-				jsonPort.put("r_phys_err", recvRPhE);
+				jsonPort.put("r_data", port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_data) * 4);
+				jsonPort.put("r_err", port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_err));
+				jsonPort.put("r_sr_err", port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_rem_phys_err));
+				jsonPort.put("r_phys_err", port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_rem_phys_err));
+				jsonPort.put("r_con_err", port.pfmPort.getCounter(PFM_Port.PortCounterName.rcv_constraint_err));
 				
-				jsonPort.put("xmit_data", xmitData);
-				jsonPort.put("xmit_discards", xmitDrop);
-				jsonPort.put("xmit_wait", xmitWait);
-				jsonPort.put("xmit_con_err", xmitConE);
+				jsonPort.put("xmit_data", port.pfmPort.getCounter(PFM_Port.PortCounterName.xmit_data) * 4);
+				jsonPort.put("xmit_discards", port.pfmPort.getCounter(PFM_Port.PortCounterName.xmit_discards));
+				jsonPort.put("xmit_wait", port.pfmPort.getCounter(PFM_Port.PortCounterName.xmit_wait));
+				jsonPort.put("xmit_con_err", port.pfmPort.getCounter(PFM_Port.PortCounterName.xmit_constraint_err));
+	
+				jsonPort.put("mul_r_pkts", port.pfmPort.getCounter(PFM_Port.PortCounterName.multicast_rcv_pkts));
+				jsonPort.put("mul_xmit_pkts", port.pfmPort.getCounter(PFM_Port.PortCounterName.multicast_xmit_pkts));
+				jsonPort.put("uni_recv_pkts", port.pfmPort.getCounter(PFM_Port.PortCounterName.unicast_rcv_pkts));
+				jsonPort.put("uni_xmit_pkts", port.pfmPort.getCounter(PFM_Port.PortCounterName.unicast_xmit_pkts));
 				
-				countersBW.write(jsonPort.toString());
-				countersBW.newLine();
+				jsonPort.put("sym_err_cnt", port.pfmPort.getCounter(PFM_Port.PortCounterName.symbol_err_cnt));
+				jsonPort.put("vl15_drop", port.pfmPort.getCounter(PFM_Port.PortCounterName.vl15_dropped));
+				jsonPort.put("buff_overun", port.pfmPort.getCounter(PFM_Port.PortCounterName.buffer_overrun));
+				jsonPort.put("l_down", port.pfmPort.getCounter(PFM_Port.PortCounterName.link_downed));
+				jsonPort.put("l_err_recov", port.pfmPort.getCounter(PFM_Port.PortCounterName.link_err_recover));
+				jsonPort.put("l_integrity", port.pfmPort.getCounter(PFM_Port.PortCounterName.link_integrity));
+				
+				hbaseDumpBW.write(jsonPort.toString());
+				hbaseDumpBW.newLine();
 				
 				//if (i == 2) break;
 				
@@ -300,7 +324,7 @@ public class OSMHBase {
 		System.out.println("- Wrote counters file.");
 	}
 	
-	private static void writePortForwardingTableCSV(RT_Table RoutingTable, long timestamp){
+	private static void writePortForwardingTableDelimited(RT_Table RoutingTable, long timestamp){
 		
 		RT_Node node;
 		String nguid;
@@ -367,6 +391,7 @@ public class OSMHBase {
 						portNum = port.getPortNumber();
 						
 						jsonPort = new JSONObject();
+						jsonPort.put("recordType", "route");
 						jsonPort.put("ts", timestamp);
 						jsonPort.put("nguid", nguid);
 						jsonPort.put("portNum", portNum);
@@ -378,8 +403,8 @@ public class OSMHBase {
 							
 						}
 						
-						jsonPort.put("routes", routes);
-						routesBW.write(jsonPort.toString()); routesBW.newLine();
+						jsonPort.put("routes", routes.toString());
+						hbaseDumpBW.write(jsonPort.toString()); hbaseDumpBW.newLine();
 					}
 				}
 			}catch (Exception e){
@@ -388,7 +413,7 @@ public class OSMHBase {
 			System.out.println("- Wrote routes to file.");
 		}
 	
-	private static void writeLinksCSV(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
+	private static void writeLinksDelimited(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
 		OSM_Port port1, port2;
 		String nguid1, nguid2;
 		Integer portNum1, portNum2;
@@ -439,15 +464,17 @@ public class OSMHBase {
 
 	}
 	
-	private static void writeLinksJSON(LinkedHashMap<String, IB_Link> ibLinks, long timestamp){
+	private static void writeLinksJSON(OSM_Fabric fabric, long timestamp){
 		OSM_Port port1, port2;
 		String nguid1, nguid2;
 		Integer portNum1, portNum2;
-		String nodeType1, nodeType2, conn1, conn2;
+		String nodeType1, nodeType2, desc1, desc2, conn1, conn2;
 		int lid1, lid2;
 		JSONObject jsonPort1 = null, jsonPort2 = null;
 		
-		for(Map.Entry<String, IB_Link> entry: ibLinks.entrySet()){
+		LinkedHashMap<String, IB_Link> ibLinks;
+		
+		for(Map.Entry<String, IB_Link> entry: fabric.getIB_Links().entrySet()){
 	        IB_Link ln = entry.getValue();
 	        
 	        port1 = ln.getEndpoint1();
@@ -455,6 +482,9 @@ public class OSMHBase {
 	        
 	        nguid1 = port1.getNodeGuid().toColonString().replace(":", "");
 	        nguid2 = port2.getNodeGuid().toColonString().replace(":", "");
+	        
+	        desc1 = fabric.getOSM_Node(port1.getNodeGuid()).sbnNode.description;
+	        desc2 = fabric.getOSM_Node(port2.getNodeGuid()).sbnNode.description;
 	        
 	        portNum1 =  port1.getPortNumber();
 	        portNum2 =  port2.getPortNumber();
@@ -464,75 +494,48 @@ public class OSMHBase {
 	        
 	        lid1 = port1.getAddress().getLocalId();
 	        lid2 = port2.getAddress().getLocalId();
-	        
+	                
 	        conn1 = nguid2 + ":" + portNum2;
 	        conn2 = nguid1 + ":" + portNum1;
 	        
 	        try{
 	        	jsonPort1 = new JSONObject();
+	        	jsonPort1.put("recordType", "link");
 				jsonPort1.put("ts", timestamp);
 				jsonPort1.put("nguid", nguid1);
+				jsonPort1.put("ndesc", desc1);
 				jsonPort1.put("portNum", portNum1);
 				jsonPort1.put("type", nodeType1);
 				jsonPort1.put("lid", lid1);
 				jsonPort1.put("conn", conn1);
+				jsonPort1.put("speed", port1.getSpeedString());
+				jsonPort1.put("state", port1.getStateString());
+				jsonPort1.put("width", port1.getWidthString());
+				jsonPort1.put("rate", port1.getRateString());
+				jsonPort1.put("pguid", port1.sbnPort.port_guid);
 				
 				jsonPort2 = new JSONObject();
+				jsonPort2.put("recordType", "link");
 				jsonPort2.put("ts", timestamp);
 				jsonPort2.put("nguid", nguid2);
+				jsonPort2.put("ndesc", desc2);
 				jsonPort2.put("portNum", portNum2);
 				jsonPort2.put("type", nodeType2);
 				jsonPort2.put("lid", lid2);
 				jsonPort2.put("conn", conn2);
+				jsonPort2.put("speed", port2.getSpeedString());
+				jsonPort2.put("state", port2.getStateString());
+				jsonPort2.put("width", port2.getWidthString());
+				jsonPort2.put("rate", port2.getRateString());
+				jsonPort2.put("pguid", port2.sbnPort.port_guid);
 				
-				
-		        linksBW.write(jsonPort1.toString());  linksBW.newLine();
-		        linksBW.write(jsonPort2.toString());  linksBW.newLine();
+				hbaseDumpBW.write(jsonPort1.toString());  hbaseDumpBW.newLine();
+				hbaseDumpBW.write(jsonPort2.toString());  hbaseDumpBW.newLine();
 	        }catch (Exception e){
 				System.out.println("ERROR: Unable to write links to file.");
 			}
 		}
 		System.out.println("- Wrote links file.");
 
-	}
-	
-	public static void WorkConsole(String[] args) throws Exception
-	{
-		// Get input using IDE
-		/*
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		System.out.print("Enter oun: ");
-		String oun = br.readLine();
-		System.out.print("Enter otp: ");
-		String otp = br.readLine();
-		*/
-		
-		// Get input at console (non-IDE)
-		Console console = System.console();
-		String oun = console.readLine("Enter username: ");
-		String otp = new String(console.readPassword("Enter OTP: "));
-		
-		// establish a connection, and dump the system info
-	    OsmSession ParentSession = null;
-	    /* the one and only OsmServiceManager */
-	    OsmServiceManager OsmService = OsmServiceManager.getInstance();
-	    try
-	    {
-	      ParentSession = OsmService.openSession("cab664.llnl.gov", "10011", oun, otp);
-	    }
-	    catch (Exception e)
-	    {
-	      System.err.println(e.getStackTrace().toString());
-	      System.exit(-1);
-	    }
-	    if (ParentSession != null)
-	    {
-	      OsmClientApi clientInterface = ParentSession.getClientApi();
-	      /* use the api's to get the system information */
-	      OSM_SysInfo sysinfo = clientInterface.getOsmSysInfo();
-	      System.out.println(sysinfo);
-	      /* all done, so close the session(s) */
-	      OsmService.closeSession(ParentSession);
-	    }
 	}
 }
