@@ -6,9 +6,20 @@
 {"nguid":"0011750000772800","ndesc":"cab893 qib0","conn":"00066a00e300440e:6","ts":1438811424,"speed":"QDR","portNum":1,"width":"4x","state":"Active","type":"CA","lid":201,"rate":"40 Gb\/s","pguid":4913717472339968,"recordType":"link"}
 {"nguid":"00066a00e30043ec","ndesc":"ib61","conn":"0011750000772a00:1","ts":1438811424,"speed":"QDR","portNum":3,"width":"4x","state":"Active","type":"SW","lid":153,"rate":"40 Gb\/s","pguid":1805401901253612,"recordType":"link"}
 {"nguid":"00066a00eb003b6f","ts":1438815564,"routes":"903:957:395:240:99:953:1375:1468:1359:174:1408:1383:1325:1459:1074:1165:1489:916:387:1305:1430:817:173:649:197:1311:1373:960:684:1335:1334:814:1405:1415:545:478:1303:","portNum":28,"recordType":"route"}
-{"nguid":"00066a00eb003b6f","ts":1438815564,"routes":"315:384:920:396:288:414:748:1455:355:548:1223:786:659:588:644:320:310:634:721:316:606:544:1084:455:810:100:619:1050:386:962:1214:430:569:802:742:453:645:","portNum":29,"recordType":"route"}
+
 {"nguid":"00066a00e300440d","ts":1438815564,"routes":"719:1407:573:1465:402:526:650:1087:1188:674:469:474:565:876:204:574:666:1478:986:1379:495:383:1271:511:1364:1110:837:1092:80:757:1028:550:879:945:178:245:646:189:77:635:961:919:1338:465:951:1046:160:614:971:935:1404:472:256:1003:605:1021:150:1045:1189:1139:724:1388:714:1068:1047:1013:416:1479:1008:185:533:1090:265:976:1387:267:909:1358:1243:1236:955:1292:306:1117:33:376:1322:1349:366:331:1196:869:296:269:280:46:332:940:540:1182:1023:1144:654:36:1048:443:27:1049:210:1183:1064:923:1128:382:97:1:1115:485:209:1393:397:1261:349:1432:93:842:1247:904:1467:685:1448:683:1296:471:679:882:220:908:803:995:419:874:20:1158:744:765:500:529:1034:259:1457:","portNum":20,"recordType":"route"}
 {"l_integrity":0,"r_con_err":0,"mul_xmit_pkts":0,"nguid":"00066a00e3004427","ts":1438811784,"xmit_wait":0,"portNum":6,"xmit_data":17553753340160,"uni_recv_pkts":0,"r_data":17374261173588,"r_sr_err":0,"xmit_discards":0,"uni_xmit_pkts":0,"r_err":0,"l_err_recov":0,"l_down":0,"mul_r_pkts":0,"buff_overun":0,"sym_err_cnt":65535,"recordType":"counter","vl15_drop":0,"xmit_con_err":0,"r_phys_err":0}
 {"l_integrity":0,"r_con_err":0,"mul_xmit_pkts":0,"nguid":"00066a00e3004427","ts":1438811784,"xmit_wait":0,"portNum":7,"xmit_data":7693677796800,"uni_recv_pkts":0,"r_data":7557828361384,"r_sr_err":0,"xmit_discards":0,"uni_xmit_pkts":0,"r_err":0,"l_err_recov":0,"l_down":0,"mul_r_pkts":0,"buff_overun":0,"sym_err_cnt":0,"recordType":"counter","vl15_drop":0,"xmit_con_err":0,"r_phys_err":0}
 {"l_integrity":0,"r_con_err":0,"mul_xmit_pkts":0,"nguid":"00066a00e3004427","ts":1438811784,"xmit_wait":0,"portNum":8,"xmit_data":7834537882660,"uni_recv_pkts":0,"r_data":7723791273296,"r_sr_err":0,"xmit_discards":0,"uni_xmit_pkts":0,"r_err":0,"l_err_recov":0,"l_down":0,"mul_r_pkts":0,"buff_overun":0,"sym_err_cnt":196605,"recordType":"counter","vl15_drop":0,"xmit_con_err":0,"r_phys_err":0}
 {"l_integrity":0,"r_con_err":0,"mul_xmit_pkts":0,"nguid":"00066a00e3004427","ts":1438811784,"xmit_wait":0,"portNum":9,"xmit_data":7841158890216,"uni_recv_pkts":0,"r_data":7718194398360,"r_sr_err":0,"xmit_discards":0,"uni_xmit_pkts":0,"r_err":0,"l_err_recov":0,"l_down":0,"mul_r_pkts":0,"buff_overun":0,"sym_err_cnt":196605,"recordType":"counter","vl15_drop":0,"xmit_con_err":0,"r_phys_err":0}
+
+
+
+LINK: describes the connection between this node:port and a remote node:port
+{"nguid":"00066a00e30043f6","ndesc":"ib64","conn":"0011750000771100:1","ts":1438811424,"speed":"QDR","portNum":7,"width":"4x","state":"Active","type":"SW","lid":146,"rate":"40 Gb\/s","pguid":1805401901253622,"recordType":"link"}
+
+ROUTE: describes the destination ports can be reached by using this node:port
+{"nguid":"00066a00eb003b6f","ts":1438815564,"routes":"315:384:920:396:288:414:748:1455:355:548:1223:786:659:588:644:320:310:634:721:316:606:544:1084:455:810:100:619:1050:386:962:1214:430:569:802:742:453:645:","portNum":29,"recordType":"route"}
+
+COUNTER: describes the metrics of this node:port
+{"l_integrity":0,"r_con_err":0,"mul_xmit_pkts":0,"nguid":"00066a00e3004427","ts":1438811784,"xmit_wait":0,"portNum":6,"xmit_data":17553753340160,"uni_recv_pkts":0,"r_data":17374261173588,"r_sr_err":0,"xmit_discards":0,"uni_xmit_pkts":0,"r_err":0,"l_err_recov":0,"l_down":0,"mul_r_pkts":0,"buff_overun":0,"sym_err_cnt":65535,"recordType":"counter","vl15_drop":0,"xmit_con_err":0,"r_phys_err":0}
