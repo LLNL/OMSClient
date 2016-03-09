@@ -11,11 +11,10 @@ This moves information from OMS history files (.his) and stores it in HBase. The
 OSMHBase : IB Performance Processor
  OSMHBase <operation> [<args>...] [json/del]
 
-
+Usage:
 ```
 #!shell
 
-Usage:");
 # OMSHbase help                            - Shows this help/usage message.
 # OMSHbase parseHis /path/to/his/dir       - Extract data from OMS '.his' files located in a given path.
 # OMSHbase parseHis /path/to/hisFile       - Extract data from a single '.his'
@@ -29,5 +28,3 @@ Usage:");
 2. Writing to HBase ##
 
 The hbaseLoader will read JSON text and write to HBase - (WIP)
-
- 
