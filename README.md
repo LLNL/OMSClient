@@ -36,7 +36,7 @@ OMSHbase parseHis <path> json            - Writes data in JSON format.
 OMSHbase parseHis <path> del             - Writes data in delimited format.
 ```
 
-On LC machinesm, you might have to add some arguments:
+On LC machines, you might have to add some arguments:
 ```
 java -classpath .:../../lib/* OSMHBase parseHis <path> <json/del>
 ```
