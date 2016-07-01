@@ -31,7 +31,7 @@ public class OSMHBase {
     	}
 	};
 	private static File hisDir;
-	private static File outDir = new File("/Users/brown303/workspace/eclipse/OSM-HBASE/data/processed");
+	private static File outDir = new File(".");
 	private static enum outFormat {json, delimited};
 	
 	public static void main(String[] args) throws Exception
